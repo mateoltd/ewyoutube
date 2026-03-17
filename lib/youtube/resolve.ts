@@ -1,6 +1,7 @@
 import { Innertube } from "youtubei.js";
 import type { QueryResult, VideoInfo } from "@/lib/types";
 import { SEARCH_RESULT_LIMIT } from "@/lib/constants";
+import { getBasicInfoWithFallback } from "@/lib/youtube/basic-info";
 
 // Extract video ID from URL or string
 function tryParseVideoId(query: string): string | null {
@@ -158,7 +159,7 @@ async function tryResolveVideo(
   if (!videoId) return null;
 
   try {
-    const info = await yt.getBasicInfo(videoId);
+    const info = await getBasicInfoWithFallback(videoId, { yt });
     const bi = info.basic_info;
 
     return {
@@ -179,7 +180,39 @@ async function tryResolveVideo(
       ],
     };
   } catch {
-    return null;
+    try {
+      const url = new URL("https://www.youtube.com/oembed");
+      url.searchParams.set("url", `https://www.youtube.com/watch?v=${videoId}`);
+      url.searchParams.set("format", "json");
+
+      const response = await fetch(url, { cache: "no-store" });
+      if (!response.ok) return null;
+
+      const data = (await response.json()) as {
+        title?: string;
+        author_name?: string;
+        thumbnail_url?: string;
+      };
+
+      if (!data.title) return null;
+
+      return {
+        kind: "video",
+        title: data.title,
+        videos: [
+          {
+            id: videoId,
+            title: data.title,
+            author: data.author_name ?? "Unknown",
+            authorId: "",
+            duration: 0,
+            thumbnailUrl: data.thumbnail_url ?? thumbnailUrl(videoId),
+          },
+        ],
+      };
+    } catch {
+      return null;
+    }
   }
 }
 

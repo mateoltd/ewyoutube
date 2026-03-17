@@ -3,6 +3,8 @@ import { getInnertube } from "@/lib/youtube/client";
 import { resolveQuery } from "@/lib/youtube/resolve";
 import type { SearchRequest, SearchResponse } from "@/lib/types";
 
+export const runtime = "nodejs";
+
 export async function POST(request: Request) {
   try {
     const body = (await request.json()) as SearchRequest;

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { spawn } from "child_process";
 
+export const runtime = "nodejs";
+
 /**
  * Lightweight URL resolver — spawns a single yt-dlp to get direct CDN URLs.
  * Much faster than /api/download which also proxies the full stream.

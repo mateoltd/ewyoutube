@@ -1,5 +1,6 @@
 import { Innertube } from "youtubei.js";
 import type { DownloadOption, Container } from "@/lib/types";
+import { getBasicInfoWithFallback } from "@/lib/youtube/basic-info";
 
 /**
  * Port of VideoDownloadOption.ResolveAll from C#.
@@ -14,7 +15,10 @@ export async function resolveDownloadOptions(
   yt: Innertube,
   videoId: string
 ): Promise<DownloadOption[]> {
-  const info = await yt.getBasicInfo(videoId);
+  const info = await getBasicInfoWithFallback(videoId, {
+    yt,
+    requireStreamingData: true,
+  });
   const streamingData = info.streaming_data;
 
   if (!streamingData) {

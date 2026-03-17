@@ -3,6 +3,8 @@ import { getInnertube } from "@/lib/youtube/client";
 import { resolveDownloadOptions } from "@/lib/youtube/streams";
 import type { StreamsRequest, StreamsResponse } from "@/lib/types";
 
+export const runtime = "nodejs";
+
 export async function POST(request: Request) {
   try {
     const body = (await request.json()) as StreamsRequest;

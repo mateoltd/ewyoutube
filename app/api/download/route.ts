@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { spawn } from "child_process";
 
+export const runtime = "nodejs";
 export const maxDuration = 300; // 5 minutes for long videos
 
 /**
