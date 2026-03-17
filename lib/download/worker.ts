@@ -9,10 +9,9 @@ export interface DownloadWorkerCallbacks {
 }
 
 /**
- * Orchestrates a single download:
- * - Muxed/single stream: stream directly from server via /api/download
- * - Needs muxing (1080p+ video+audio): download both streams, mux with ffmpeg.wasm
- * - Audio conversion (MP3/OGG): download audio stream, convert with ffmpeg.wasm
+ * Orchestrates a single download using yt-dlp's built-in download + pipe.
+ * yt-dlp handles YouTube's throttling internally (range requests, retries),
+ * which is dramatically faster than fetching raw CDN URLs.
  */
 export async function executeDownload(
   option: DownloadOption,
@@ -26,13 +25,10 @@ export async function executeDownload(
     onStatusChange("started");
 
     if (option.needsMuxing && !option.isAudioOnly && option.streams.length >= 2) {
-      // Download video + audio separately, mux client-side
       await downloadAndMux(option, videoId, fileName, onProgress, signal);
     } else if (option.needsMuxing && option.isAudioOnly) {
-      // Audio format conversion via ffmpeg (e.g., WebM → MP3)
       await downloadAndConvertAudio(option, videoId, fileName, onProgress, signal);
     } else {
-      // Single stream, no muxing needed - stream directly from server
       await downloadDirect(option, videoId, fileName, onProgress, signal);
     }
 
@@ -47,11 +43,13 @@ export async function executeDownload(
 }
 
 /**
- * Fetch a stream from the server-side download endpoint with progress tracking.
+ * Fetch a stream from the yt-dlp download endpoint with progress tracking.
+ * yt-dlp pipes the download directly to stdout, handling throttle avoidance.
  */
 async function fetchStream(
   videoId: string,
   params: Record<string, string>,
+  expectedSize: number,
   onProgress: (downloaded: number, total: number) => void,
   signal: AbortSignal
 ): Promise<Blob> {
@@ -71,6 +69,7 @@ async function fetchStream(
     response.headers.get("content-length") ?? "0",
     10
   );
+  const total = contentLength || expectedSize;
   const contentType =
     response.headers.get("content-type") ?? "application/octet-stream";
 
@@ -89,7 +88,7 @@ async function fetchStream(
     if (done) break;
     chunks.push(value);
     downloaded += value.byteLength;
-    onProgress(downloaded, contentLength);
+    onProgress(downloaded, total);
   }
 
   return new Blob(chunks as BlobPart[], { type: contentType });
@@ -103,7 +102,6 @@ async function downloadDirect(
   signal: AbortSignal
 ): Promise<void> {
   const stream = option.streams[0];
-  // Extract itag from the option id
   const itagMatch = option.id.match(/(\d+)/);
   const itag = itagMatch ? itagMatch[1] : undefined;
 
@@ -117,6 +115,7 @@ async function downloadDirect(
   const blob = await fetchStream(
     videoId,
     params,
+    option.totalSize,
     (downloaded, total) => {
       onProgress(total > 0 ? downloaded / total : 0);
     },
@@ -141,7 +140,6 @@ async function downloadAndMux(
     throw new Error("Missing video or audio stream for muxing");
   }
 
-  // Extract itags from option ID (e.g., "adaptive-137-140")
   const itags = option.id.match(/\d+/g) ?? [];
   const videoItag = itags[0];
   const audioItag = itags[1];
@@ -158,7 +156,7 @@ async function downloadAndMux(
     }
   };
 
-  // Download video + audio streams in parallel (progress: 0-60%)
+  // Download video + audio in parallel via yt-dlp pipe (progress: 0-60%)
   const [videoBlob, audioBlob] = await Promise.all([
     fetchStream(
       videoId,
@@ -168,10 +166,10 @@ async function downloadAndMux(
         format: option.container,
         ...(videoItag ? { itag: videoItag } : {}),
       },
+      videoSize,
       (downloaded, total) => {
         videoDownloaded = downloaded;
         if (totalSize === 0 && total > 0) {
-          // Fallback: estimate from HTTP content-length
           onProgress((downloaded / total) * 0.3);
         } else {
           reportProgress();
@@ -187,10 +185,10 @@ async function downloadAndMux(
         format: option.container === "mp4" ? "mp4" : "webm",
         ...(audioItag ? { itag: audioItag } : {}),
       },
+      audioSize,
       (downloaded, total) => {
         audioDownloaded = downloaded;
         if (totalSize === 0 && total > 0) {
-          // Audio is typically small, bias progress toward 50-60%
           onProgress(0.3 + (downloaded / total) * 0.3);
         } else {
           reportProgress();
@@ -220,7 +218,6 @@ async function downloadAndConvertAudio(
   onProgress: (progress: number) => void,
   signal: AbortSignal
 ): Promise<void> {
-  // Download the source audio
   const blob = await fetchStream(
     videoId,
     {
@@ -228,6 +225,7 @@ async function downloadAndConvertAudio(
       quality: "best",
       format: "any",
     },
+    option.totalSize,
     (downloaded, total) => {
       onProgress(total > 0 ? (downloaded / total) * 0.6 : 0);
     },
