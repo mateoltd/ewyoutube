@@ -102,15 +102,15 @@ async function downloadDirect(
   signal: AbortSignal
 ): Promise<void> {
   const stream = option.streams[0];
-  const itagMatch = option.id.match(/(\d+)/);
-  const itag = itagMatch ? itagMatch[1] : undefined;
+  const formatSpec = option.formatSpec ?? stream?.formatSpec;
+
+  if (!formatSpec) {
+    throw new Error("Missing format selector");
+  }
 
   const params: Record<string, string> = {
-    type: option.isAudioOnly ? "audio" : "video+audio",
-    quality: stream.qualityLabel ?? "best",
-    format: option.container,
+    formatSpec,
   };
-  if (itag) params.itag = itag;
 
   const blob = await fetchStream(
     videoId,
@@ -140,9 +140,12 @@ async function downloadAndMux(
     throw new Error("Missing video or audio stream for muxing");
   }
 
-  const itags = option.id.match(/\d+/g) ?? [];
-  const videoItag = itags[0];
-  const audioItag = itags[1];
+  const videoFormatSpec = videoStream.formatSpec;
+  const audioFormatSpec = audioStream.formatSpec;
+
+  if (!videoFormatSpec || !audioFormatSpec) {
+    throw new Error("Missing video or audio format selector for muxing");
+  }
 
   const videoSize = videoStream.contentLength || 0;
   const audioSize = audioStream.contentLength || 0;
@@ -161,10 +164,7 @@ async function downloadAndMux(
     fetchStream(
       videoId,
       {
-        type: "video",
-        quality: videoStream.qualityLabel ?? "best",
-        format: option.container,
-        ...(videoItag ? { itag: videoItag } : {}),
+        formatSpec: videoFormatSpec,
       },
       videoSize,
       (downloaded, total) => {
@@ -180,10 +180,7 @@ async function downloadAndMux(
     fetchStream(
       videoId,
       {
-        type: "audio",
-        quality: "best",
-        format: option.container === "mp4" ? "mp4" : "webm",
-        ...(audioItag ? { itag: audioItag } : {}),
+        formatSpec: audioFormatSpec,
       },
       audioSize,
       (downloaded, total) => {
@@ -218,12 +215,16 @@ async function downloadAndConvertAudio(
   onProgress: (progress: number) => void,
   signal: AbortSignal
 ): Promise<void> {
+  const formatSpec = option.formatSpec ?? option.streams[0]?.formatSpec;
+
+  if (!formatSpec) {
+    throw new Error("Missing audio format selector");
+  }
+
   const blob = await fetchStream(
     videoId,
     {
-      type: "audio",
-      quality: "best",
-      format: "any",
+      formatSpec,
     },
     option.totalSize,
     (downloaded, total) => {

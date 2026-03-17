@@ -21,6 +21,7 @@ export const maxDuration = 300; // 5 minutes for long videos
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
   const videoId = searchParams.get("videoId");
+  const formatSpecParam = searchParams.get("formatSpec");
   const itag = searchParams.get("itag");
   const type = searchParams.get("type") ?? "video+audio";
   const quality = searchParams.get("quality") ?? "best";
@@ -31,7 +32,9 @@ export async function GET(request: NextRequest) {
 
   // Build yt-dlp format selector
   let formatSpec: string;
-  if (itag) {
+  if (formatSpecParam) {
+    formatSpec = formatSpecParam;
+  } else if (itag) {
     formatSpec = itag;
   } else if (type === "audio") {
     formatSpec =

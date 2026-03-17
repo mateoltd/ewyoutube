@@ -1,7 +1,8 @@
 import { Innertube } from "youtubei.js";
 import type { QueryResult, VideoInfo } from "@/lib/types";
 import { SEARCH_RESULT_LIMIT } from "@/lib/constants";
-import { getBasicInfoWithFallback } from "@/lib/youtube/basic-info";
+import { getInnertube } from "@/lib/youtube/client";
+import { resolveVideoWithYtDlp } from "@/lib/youtube/ytdlp";
 
 // Extract video ID from URL or string
 function tryParseVideoId(query: string): string | null {
@@ -152,33 +153,13 @@ async function tryResolvePlaylist(
 }
 
 async function tryResolveVideo(
-  yt: Innertube,
   query: string
 ): Promise<QueryResult | null> {
   const videoId = tryParseVideoId(query);
   if (!videoId) return null;
 
   try {
-    const info = await getBasicInfoWithFallback(videoId, { yt });
-    const bi = info.basic_info;
-
-    return {
-      kind: "video",
-      title: bi.title ?? "Video",
-      videos: [
-        {
-          id: bi.id ?? videoId,
-          title: bi.title ?? "Video",
-          author: bi.author ?? "Unknown",
-          authorId: bi.channel_id ?? "",
-          duration: bi.duration ?? 0,
-          thumbnailUrl:
-            bi.thumbnail?.[bi.thumbnail.length - 1]?.url ??
-            thumbnailUrl(videoId),
-          viewCount: bi.view_count ?? undefined,
-        },
-      ],
-    };
+    return await resolveVideoWithYtDlp(videoId);
   } catch {
     try {
       const url = new URL("https://www.youtube.com/oembed");
@@ -293,19 +274,26 @@ async function resolveSearch(
  * Priority: ? prefix search → playlist → video → channel → search fallback
  */
 export async function resolveQuery(
-  yt: Innertube,
+  yt: Innertube | null,
   query: string
 ): Promise<QueryResult> {
   query = query.trim();
 
   // Force search with ? prefix
   if (query.startsWith("?")) {
+    yt ??= await getInnertube();
     return resolveSearch(yt, query.slice(1).trim());
   }
 
+  const directVideo = await tryResolveVideo(query);
+  if (directVideo) {
+    return directVideo;
+  }
+
+  yt ??= await getInnertube();
+
   return (
     (await tryResolvePlaylist(yt, query)) ??
-    (await tryResolveVideo(yt, query)) ??
     (await tryResolveChannel(yt, query)) ??
     (await resolveSearch(yt, query))
   );

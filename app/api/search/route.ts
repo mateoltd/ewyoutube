@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { getInnertube } from "@/lib/youtube/client";
 import { resolveQuery } from "@/lib/youtube/resolve";
 import type { SearchRequest, SearchResponse } from "@/lib/types";
 
@@ -14,9 +13,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Query is required" }, { status: 400 });
     }
 
-    const yt = await getInnertube();
     // Force search interpretation by prepending ?
-    const result = await resolveQuery(yt, `?${query}`);
+    const result = await resolveQuery(null, `?${query}`);
 
     return NextResponse.json({ result } satisfies SearchResponse);
   } catch (error) {

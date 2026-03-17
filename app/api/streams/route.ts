@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { getInnertube } from "@/lib/youtube/client";
 import { resolveDownloadOptions } from "@/lib/youtube/streams";
 import type { StreamsRequest, StreamsResponse } from "@/lib/types";
 
@@ -17,8 +16,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const yt = await getInnertube();
-    const options = await resolveDownloadOptions(yt, videoId);
+    const options = await resolveDownloadOptions(videoId);
 
     return NextResponse.json({ options } satisfies StreamsResponse);
   } catch (error) {

@@ -37,6 +37,7 @@ export interface VideoInfo {
 
 export interface StreamInfo {
   url: string;
+  formatSpec?: string;
   container: Container;
   mimeType: string;
   bitrate: number;
@@ -56,6 +57,7 @@ export interface StreamInfo {
 
 export interface DownloadOption {
   id: string; // unique key for this option
+  formatSpec?: string;
   container: Container;
   isAudioOnly: boolean;
   qualityLabel: string | null; // e.g. "1080p", "720p"
