@@ -1,11 +1,24 @@
 import type { Innertube } from "youtubei.js";
 import { getInnertube, resetInnertube } from "@/lib/youtube/client";
 
-type BasicInfoClient = "ANDROID" | "MWEB" | "IOS";
+type BasicInfoClient =
+  | "WEB_CREATOR"
+  | "WEB_EMBEDDED"
+  | "ANDROID"
+  | "MWEB"
+  | "IOS"
+  | "TV";
 
 type YoutubeBasicInfo = Awaited<ReturnType<Innertube["getBasicInfo"]>>;
 
-const FALLBACK_CLIENTS: BasicInfoClient[] = ["ANDROID", "MWEB", "IOS"];
+const FALLBACK_CLIENTS: BasicInfoClient[] = [
+  "WEB_CREATOR",
+  "WEB_EMBEDDED",
+  "ANDROID",
+  "MWEB",
+  "IOS",
+  "TV",
+];
 
 interface GetBasicInfoWithFallbackOptions {
   yt?: Innertube;
@@ -17,10 +30,27 @@ function isUsableInfo(
   requireStreamingData: boolean
 ): boolean {
   if (requireStreamingData) {
-    return Boolean(info.streaming_data);
+    const formats = info.streaming_data?.formats?.length ?? 0;
+    const adaptiveFormats = info.streaming_data?.adaptive_formats?.length ?? 0;
+    return formats + adaptiveFormats > 0;
   }
 
   return Boolean(info.basic_info?.title);
+}
+
+function formatFailureReason(info: YoutubeBasicInfo, client: string): string | null {
+  const status = info.playability_status?.status;
+  const reason = info.playability_status?.reason?.trim();
+
+  if (!status && !reason) {
+    return null;
+  }
+
+  if (reason) {
+    return `${client}: ${status ?? "UNKNOWN"} - ${reason}`;
+  }
+
+  return `${client}: ${status}`;
 }
 
 async function requestBasicInfo(
@@ -45,11 +75,32 @@ async function tryBasicInfoAcrossClients(
     return primary;
   }
 
+  const failures: string[] = [];
+  const primaryReason = formatFailureReason(primary, "WEB");
+  if (primaryReason) {
+    failures.push(primaryReason);
+  }
+
   for (const client of FALLBACK_CLIENTS) {
     const fallback = await requestBasicInfo(yt, videoId, client);
     if (isUsableInfo(fallback, requireStreamingData)) {
       return fallback;
     }
+
+    const reason = formatFailureReason(fallback, client);
+    if (reason) {
+      failures.push(reason);
+    }
+  }
+
+  if (failures.length > 0) {
+    throw new Error(
+      `${
+        requireStreamingData
+          ? "No streaming data available for this video"
+          : "Failed to load video information"
+      }. Attempt results: ${failures.join(" | ")}`
+    );
   }
 
   return null;
