@@ -1,0 +1,8 @@
+[phases.setup]
+nixPkgs = ["...", "yt-dlp", "ffmpeg"]
+
+[phases.build]
+cmds = ["pnpm build"]
+
+[start]
+cmd = "pnpm start"
