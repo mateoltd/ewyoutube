@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { JetBrains_Mono, Sora } from "next/font/google";
 import "./globals.css";
+import { getBaseUrl, siteConfig } from "@/lib/seo";
 
 const sora = Sora({
   variable: "--font-sora",
@@ -14,50 +15,36 @@ const jetbrainsMono = JetBrains_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "Phantom YouTube — Download YouTube Videos Without Limits",
+    default: "Phantom YouTube | YouTube Downloader",
     template: "%s | Phantom YouTube",
   },
-  description:
-    "Download any YouTube video in any quality and format. A modern, fast, and clean web downloader for YouTube with batch support.",
-  keywords: [
-    "youtube downloader",
-    "download youtube videos",
-    "phantom youtube",
-    "youtube mp4",
-    "youtube mp3",
-    "youtube playlist downloader",
-    "youtube video downloader",
-  ],
+  description: siteConfig.description,
+  applicationName: siteConfig.name,
+  keywords: siteConfig.keywords,
   authors: [{ name: "mateoltd", url: "https://github.com/mateoltd" }],
-  creator: "mateoltd",
-  publisher: "Phantom Research",
+  creator: siteConfig.creator,
+  publisher: siteConfig.publisher,
   formatDetection: {
     email: false,
     address: false,
     telephone: false,
   },
-  metadataBase: process.env.NEXT_PUBLIC_BASE_URL
-    ? new URL(process.env.NEXT_PUBLIC_BASE_URL)
-    : process.env.VERCEL_URL
-      ? new URL(`https://${process.env.VERCEL_URL}`)
-      : new URL("http://localhost:3000"),
+  metadataBase: getBaseUrl(),
   alternates: {
     canonical: "/",
   },
   openGraph: {
-    title: "Phantom YouTube — Download YouTube Videos Without Limits",
-    description:
-      "Download any YouTube video in any quality and format. Modern web downloader with batch support.",
+    title: "Phantom YouTube | YouTube Downloader",
+    description: siteConfig.description,
     url: "/",
-    siteName: "Phantom YouTube",
+    siteName: siteConfig.name,
     locale: "en_US",
     type: "website",
   },
   twitter: {
-    card: "summary_large_image",
-    title: "Phantom YouTube — Download YouTube Videos Without Limits",
-    description:
-      "Download any YouTube video in any quality and format. Modern web downloader with batch support.",
+    card: "summary",
+    title: "Phantom YouTube | YouTube Downloader",
+    description: siteConfig.description,
     creator: "@mateoltd",
   },
   robots: {

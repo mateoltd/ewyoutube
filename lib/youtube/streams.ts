@@ -219,5 +219,44 @@ function deduplicateOptions(options: DownloadOption[]): DownloadOption[] {
     }
   }
 
-  return result;
+  return result.sort(compareDownloadOptions);
+}
+
+const videoContainerOrder: Record<Container, number> = {
+  mp4: 0,
+  webm: 1,
+  mp3: 2,
+  ogg: 3,
+};
+
+const audioContainerOrder: Record<Container, number> = {
+  mp3: 0,
+  mp4: 1,
+  ogg: 2,
+  webm: 3,
+};
+
+function compareDownloadOptions(a: DownloadOption, b: DownloadOption): number {
+  if (a.isAudioOnly !== b.isAudioOnly) {
+    return a.isAudioOnly ? 1 : -1;
+  }
+
+  if (!a.isAudioOnly && !b.isAudioOnly) {
+    const heightDiff = (b.height ?? 0) - (a.height ?? 0);
+    if (heightDiff !== 0) return heightDiff;
+
+    const containerDiff =
+      videoContainerOrder[a.container] - videoContainerOrder[b.container];
+    if (containerDiff !== 0) return containerDiff;
+
+    if (a.needsMuxing !== b.needsMuxing) {
+      return a.needsMuxing ? 1 : -1;
+    }
+  } else {
+    const containerDiff =
+      audioContainerOrder[a.container] - audioContainerOrder[b.container];
+    if (containerDiff !== 0) return containerDiff;
+  }
+
+  return (b.totalSize ?? 0) - (a.totalSize ?? 0);
 }

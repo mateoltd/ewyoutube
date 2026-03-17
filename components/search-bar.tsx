@@ -69,11 +69,13 @@ export function SearchBar({
       <section className="animate-fade-in">
         <div className="mt-16 flex flex-col items-center sm:mt-24">
           <h1 className="text-center text-[2.5rem] font-bold leading-[1] tracking-[-0.035em] text-text sm:text-5xl lg:text-[4.5rem]">
-            Download YouTube
+            Download YouTube videos, audio, and playlists
           </h1>
-          <h1 className="mt-1 text-center text-[2.5rem] font-bold leading-[1] tracking-[-0.035em] text-text-tertiary sm:text-5xl lg:text-[4.5rem]">
-            Without Limits
-          </h1>
+          <p className="mt-3 max-w-2xl text-center text-sm leading-6 text-text-secondary sm:text-base">
+            Paste a YouTube link, video ID, playlist URL, or search query to
+            quickly inspect available download options in a clean, batch-ready
+            interface.
+          </p>
         </div>
 
         <form onSubmit={handleSubmit} className="mx-auto mt-10 max-w-2xl sm:mt-12">
@@ -135,7 +137,7 @@ export function SearchBar({
             </button>
           </div>
           <p className="mt-3 text-center text-[12px] text-text-tertiary/80">
-            Paste a link, video ID, playlist URL, or search by name
+            Paste a link, video ID, playlist URL, or search by keyword
           </p>
         </form>
       </section>
