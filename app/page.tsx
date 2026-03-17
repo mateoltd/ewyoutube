@@ -184,6 +184,13 @@ export default function Home() {
               </div>
             )}
 
+            {/* Download queue — above results so it's always visible */}
+            {downloads.length > 0 && (
+              <div className="mb-5 px-1 sm:px-0 animate-fade-in">
+                <DownloadQueue />
+              </div>
+            )}
+
             {/* Search results / video list */}
             {result && result.videos.length >= 1 && !batchDialogOpen && (
               <div
@@ -206,16 +213,6 @@ export default function Home() {
                   videos={result.videos}
                   onVideoClick={handleVideoClick}
                 />
-              </div>
-            )}
-
-            {/* Download queue */}
-            {downloads.length > 0 && (
-              <div
-                className="mt-6 px-1 sm:px-0 stagger-child"
-                style={{ animationDelay: "0.1s" }}
-              >
-                <DownloadQueue />
               </div>
             )}
 

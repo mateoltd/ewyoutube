@@ -146,42 +146,59 @@ async function downloadAndMux(
   const videoItag = itags[0];
   const audioItag = itags[1];
 
-  const totalSize =
-    (videoStream.contentLength || 1) + (audioStream.contentLength || 1);
+  const videoSize = videoStream.contentLength || 0;
+  const audioSize = audioStream.contentLength || 0;
+  const totalSize = videoSize + audioSize;
   let videoDownloaded = 0;
+  let audioDownloaded = 0;
 
-  // Download video stream (progress: 0-30%)
-  const videoBlob = await fetchStream(
-    videoId,
-    {
-      type: "video",
-      quality: videoStream.qualityLabel ?? "best",
-      format: option.container,
-      ...(videoItag ? { itag: videoItag } : {}),
-    },
-    (downloaded) => {
-      videoDownloaded = downloaded;
-      onProgress((downloaded / totalSize) * 0.3);
-    },
-    signal
-  );
+  const reportProgress = () => {
+    if (totalSize > 0) {
+      onProgress(((videoDownloaded + audioDownloaded) / totalSize) * 0.6);
+    }
+  };
 
-  // Download audio stream (progress: 30-60%)
-  const audioBlob = await fetchStream(
-    videoId,
-    {
-      type: "audio",
-      quality: "best",
-      format: option.container === "mp4" ? "mp4" : "webm",
-      ...(audioItag ? { itag: audioItag } : {}),
-    },
-    (downloaded) => {
-      onProgress(
-        ((videoDownloaded + downloaded) / totalSize) * 0.3 + 0.3
-      );
-    },
-    signal
-  );
+  // Download video + audio streams in parallel (progress: 0-60%)
+  const [videoBlob, audioBlob] = await Promise.all([
+    fetchStream(
+      videoId,
+      {
+        type: "video",
+        quality: videoStream.qualityLabel ?? "best",
+        format: option.container,
+        ...(videoItag ? { itag: videoItag } : {}),
+      },
+      (downloaded, total) => {
+        videoDownloaded = downloaded;
+        if (totalSize === 0 && total > 0) {
+          // Fallback: estimate from HTTP content-length
+          onProgress((downloaded / total) * 0.3);
+        } else {
+          reportProgress();
+        }
+      },
+      signal
+    ),
+    fetchStream(
+      videoId,
+      {
+        type: "audio",
+        quality: "best",
+        format: option.container === "mp4" ? "mp4" : "webm",
+        ...(audioItag ? { itag: audioItag } : {}),
+      },
+      (downloaded, total) => {
+        audioDownloaded = downloaded;
+        if (totalSize === 0 && total > 0) {
+          // Audio is typically small, bias progress toward 50-60%
+          onProgress(0.3 + (downloaded / total) * 0.3);
+        } else {
+          reportProgress();
+        }
+      },
+      signal
+    ),
+  ]);
 
   // Mux with ffmpeg.wasm (progress: 60-100%)
   onProgress(0.6);

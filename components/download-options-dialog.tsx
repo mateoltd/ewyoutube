@@ -157,10 +157,8 @@ export function DownloadOptionsDialog({
           </button>
           <button
             onClick={() => {
-              if (selectedOption) {
-                onDownload(video, selectedOption);
-                onClose();
-              }
+              if (!selectedOption) return;
+              onDownload(video, selectedOption);
             }}
             disabled={!selectedOption || loading}
             className="rounded-lg bg-phantom px-4 py-2 text-[13px] font-semibold text-white transition-all hover:bg-phantom-dark active:scale-[0.97] disabled:opacity-30"
@@ -188,7 +186,7 @@ function OptionRow({
       onClick={onSelect}
       className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors ${
         selected
-          ? "bg-phantom/8"
+          ? "bg-phantom/15"
           : "hover:bg-white/[0.03]"
       }`}
     >

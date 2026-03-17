@@ -51,11 +51,11 @@ export async function GET(request: NextRequest) {
       formatSpec = `best${heightFilter}[ext=${container}]/best${heightFilter}`;
     }
 
-    // Get direct URL via yt-dlp
-    const url = await getStreamUrl(videoId, formatSpec);
-
-    // Get video title for filename
-    const title = await getVideoTitle(videoId);
+    // Get direct URL and title in parallel
+    const [url, title] = await Promise.all([
+      getStreamUrl(videoId, formatSpec),
+      getVideoTitle(videoId),
+    ]);
     const fileName = `${title}.${container}`;
 
     // Proxy the stream from YouTube CDN to client
