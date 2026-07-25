@@ -1,8 +1,0 @@
-[phases.setup]
-nixPkgs = ["...", "ffmpeg"]
-
-[phases.build]
-cmds = ["pnpm build"]
-
-[start]
-cmd = "pnpm start"
